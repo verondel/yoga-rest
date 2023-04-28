@@ -9,12 +9,14 @@ This is a REST API for a yoga site where users can register and book classes, an
 2.  Install dependencies:
     `npm install`
 3.  Create a `.env` file in the project root with the following contents:
+
     ```
     DATABASE_URL=postgresql://<username>:<password>@<hostname>:<port>/<database>
     LOGIN = 'admin'
     PASSWORD = 'c93ccd78b2076528346216b3b2f701e6'
     SOLE = '1234'
     ```
+    
 4.  Run database migrations:
     `npx prisma migrate dev`
 5.  Start the server:
