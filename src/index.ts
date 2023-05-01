@@ -47,6 +47,16 @@ app.get('/users', async (req, res) => {
 
 // main types of yoga
 app.get('/typesAndLessons', async (req, res) => {
+  
+  interface Result {
+    part?: number
+    id?: number,
+    dt: Date,
+    full_name?: string,
+    tp_lesson?: string,
+    discription?: string
+  }
+
   const tp_lessons = await prisma.tp_lesson.findMany(
     {
       orderBy: [
@@ -56,20 +66,12 @@ app.get('/typesAndLessons', async (req, res) => {
       ],
     }
   )
-  interface Result {
-    id: number,
-    dt: string,
-    full_name: Date,
-    tp_lesson: string,
-    discription: string
-  }
 
   const lessons : Result[] = await prisma.$queryRaw`
     SELECT lesson.id, 
-        lesson.dt AT TIME ZONE 'Europe/Moscow', 
+        lesson.dt, 
         teacher.full_name, 
-        tp_lesson.name, 
-        tp_lesson.discription 
+        tp_lesson.name as tp_lesson
     FROM public.lesson
     INNER JOIN public.specialty_of_teacher ON lesson.id_specialty_of_teacher = specialty_of_teacher.id
     INNER JOIN public.teacher ON specialty_of_teacher.id_teacher = teacher.id
@@ -77,11 +79,179 @@ app.get('/typesAndLessons', async (req, res) => {
     WHERE public.lesson.dt BETWEEN (DATE_TRUNC('WEEK', CURRENT_DATE)) AND 
                             (DATE_TRUNC('WEEK', CURRENT_DATE) + INTERVAL '6 days')
     ORDER BY lesson.dt;
-`
+  `
 // tp_lesson.discription 
+//  AT TIME ZONE 'Europe/Moscow'
+  // console.log("I'm in correct", lessons)
 
-  let allDate = {tp_lessons, lessons}
-  // console.log(allDate.lessons)
+  let lessonsWithDuplicates: Result[] = []
+  // make dublicates for td
+  lessons.forEach(lesson => {
+    Object.assign(lesson, {part: 0})
+    lessonsWithDuplicates.push(lesson)
+
+    console.log(lesson)
+    for(let i = 1; i < 6; i++){ // занятие длится 1,5 часа 
+      let date = new Date(lesson.dt)
+      let newDate = new Date(date.setMinutes(date.getMinutes() + 15 * i))
+      lessonsWithDuplicates.push(
+        {part: i, id:lesson.id, full_name:lesson.full_name, 
+          tp_lesson:lesson.tp_lesson, dt: newDate
+        })
+    }
+  });
+
+  lessonsWithDuplicates.sort((a, b) => {
+    const timeA = new Date(a.dt).getTime();
+    const timeB = new Date(b.dt).getTime();
+    return timeA - timeB;
+  });
+
+  // console.log(lessonsWithDuplicates)
+  lessonsWithDuplicates.forEach(el => {
+    console.log(el.dt)
+  });
+
+
+  let months = [
+    "янв",
+    "фев",
+    "мар",
+    "апр",
+    "май",
+    "июн",
+    "июл",
+    "авг",
+    "сен",
+    "окт",
+    "ноя",
+    "дек",
+  ];
+  let hoursForTable: String[] = [
+    "11:00",
+    "12:00",
+    "13:00",
+    "14:00",
+    "15:00",
+    "16:00",
+    "17:00",
+    "18:00",
+    "19:00",
+    "20:00",
+    "21:00",
+    "22:00",
+    "23:00",
+    "24:00",
+    // "08:00",
+    // "09:00",
+    // "10:00",
+    // "11:00",
+    // "12:00",
+    // "13:00",
+    // "14:00",
+    // "15:00",
+    // "15:00",
+    // "17:00",
+    // "18:00",
+    // "19:00",
+    // "20:00",
+    // "21:00",
+  ];
+
+  let minutesForTable : String[] = ["0", "15", "30", "45"];
+
+  const currentDay = new Date();
+  let todayDate = currentDay.getDate();
+  let todayMonth = months[currentDay.getMonth()];
+  let todayStr = todayDate + " " + todayMonth;
+
+  while (currentDay.getDay() !== 1) {
+    currentDay.setDate(currentDay.getDate() - 1); // минус 1 день
+  }
+
+  let monday = new Date(currentDay);
+  let mondayItterable = new Date(currentDay.setHours(3, 0, 0));
+
+  mondayItterable.setDate(currentDay.getDate() - 1);
+  let timeschtampForTd: Date[] = [];
+
+  // генерация массива со всеми class для td
+  hoursForTable.forEach((time) => {
+    mondayItterable.setHours(+time.slice(0, 2));
+    mondayItterable.setSeconds(0);
+    mondayItterable.setMilliseconds(0);
+    minutesForTable.forEach((minutes) => {
+      for (let i = 0; i < 7; i++) {
+        mondayItterable.setDate(mondayItterable.getDate() + 1);
+        mondayItterable.setMinutes(+minutes);
+        let newDt = new Date(mondayItterable);
+        timeschtampForTd.push(newDt);
+      }
+      mondayItterable.setDate(mondayItterable.getDate() - 7);
+    });
+  });
+  console.log(timeschtampForTd);
+
+  let mondayNumber = currentDay.getDate();
+  let mondayMonth = months[currentDay.getMonth()];
+
+
+  let datesOfCurrentWeek = [];
+  datesOfCurrentWeek.push(mondayNumber + " " + mondayMonth);
+  for (let i = 0; i < 6; i++) {
+    monday.setDate(monday.getDate() + 1);
+    let nextDay = new Date(monday);
+    let day = nextDay.getDate();
+    datesOfCurrentWeek.push(day + " " + months[monday.getMonth()]);
+  }
+  console.log(datesOfCurrentWeek);
+
+
+
+  let scheduleForTable : Result[] = []
+
+  timeschtampForTd.forEach(dt => {
+    // console.log(dt.toString(), lessonsWithDuplicates[0].dt.toString(), dt.toString() == lessonsWithDuplicates[0].dt.toString())
+    // console.log(dt)
+
+    let lessonExists : boolean = false
+    // lessons.some(inObject);
+    // console.log(lessonExists)
+
+    // function inObject(lesson: any) {
+    //   return lesson.dt.toString() == dt.toString();
+      
+    // }
+
+    for(let i = 0; i < lessonsWithDuplicates.length; i++){
+      // console.log(dt, lessonsWithDuplicates[i].dt)
+      if(dt.toString() == lessonsWithDuplicates[i].dt.toString() ){
+        lessonExists = true
+        scheduleForTable.push(lessonsWithDuplicates[i])
+        break
+      }
+    }
+
+
+
+    // if (Object.values(lessonsWithDuplicates).indexOf(dt) > -1) {
+    //   console.log('has test1');
+    // }
+
+    // if (lessonsWithDuplicates.includes(dt)){
+    // if (dt.toString() == lessonsWithDuplicates[0].dt.toString()){
+    if (!lessonExists){
+      scheduleForTable.push({dt: dt})
+      // console.log('I FIND FIND',dt)
+      // lessonsWithDuplicates.shift();
+      // console.log('\n\n',lessonsWithDuplicates)
+    }
+  });
+  console.log(scheduleForTable)
+  console.log('endd')
+
+
+  let allDate = {tp_lessons, lessons, datesOfCurrentWeek, todayStr, hoursForTable, timeschtampForTd, scheduleForTable}
 
   res.json(allDate)
 })
@@ -143,6 +313,7 @@ app.post('/auth', async (req, res) => {
 // });
 
 app.patch('/api/lessons', async (req, res) => {
+  console.log('ДОБАВЛЯЮ ЗАНЯТИЯ')
   // console.log('length', Object.keys(req.body).length)
   if(Object.keys(req.body).length == 9){
     //TODO если не 9 то отсылаем обратно
@@ -298,7 +469,7 @@ app.patch('/api/lessons', async (req, res) => {
         },
       })
     });
-    // console.log('я в конце', req.body)
+    console.log('я в конце', req.body)
     res.send(req.body)
   }else{
     console.log('Форма заполнена не до конца')
@@ -325,6 +496,48 @@ app.get('/api/lessons', async (req, res) => {
   
 })
 
+// CHANGE LESSON
+app.post('/api/lessons', async (req, res) => {
+  console.log('post запрос ',req.body)
+
+  interface Specialty {
+    id: number,
+  }
+
+  let year = req.body.dt.slice(0,4)
+  let month = req.body.dt.slice(5,7) - 1
+  let day = req.body.dt.slice(8)
+  let hour = req.body.time.slice(0,2)
+  let minute = req.body.time.slice(3)
+  let hall = +req.body.hall
+
+  let lessonTimeschtamp = new Date(year, month, day, hour, minute)
+  console.log(lessonTimeschtamp)
+
+  const specialty_of_teacher : Specialty[] = await prisma.$queryRaw`
+    SELECT id 
+    FROM specialty_of_teacher sot 
+    WHERE id_tp_lesson = 2 and id_teacher = 3
+  `
+
+  let SOT = +specialty_of_teacher[0].id
+  console.log('new SOT', SOT)
+
+  const updateLesson = await prisma.lesson.update({
+    where: {
+      id: +req.body.ID,
+    },
+    data: {
+      dt: lessonTimeschtamp,
+      id_hall: hall,
+      id_specialty_of_teacher: SOT
+    },
+  })
+
+  res.send(req.query)
+})
+
+
 
 app.patch("/api/registration", async (req, res) => {
 
@@ -342,11 +555,6 @@ app.patch("/api/registration", async (req, res) => {
 //   console.log('body', req.files)
 //   res.send(req.file)
 // })
-// app.post('/api/lessons', async (req, res) => {
-//   console.log('post запрос ',req)
-//   res.send(req.query)
-// })
-
 
 
 app.get('/infoForNewLesson', async (req, res) => {
@@ -365,7 +573,7 @@ app.get('/infoForNewLesson', async (req, res) => {
 
   const lessons : Result[] = await prisma.$queryRaw`
     SELECT lesson.id, 
-      lesson.dt AT TIME ZONE 'Europe/Moscow' as dt, 
+      lesson.dt  as dt, 
       teacher.full_name as full_name, 
       tp_lesson.name as tp_lesson,
       hall.capacity as hall
@@ -377,6 +585,8 @@ app.get('/infoForNewLesson', async (req, res) => {
     WHERE public.lesson.dt >= (DATE_TRUNC('WEEK', CURRENT_DATE))
     ORDER BY lesson.dt;
   `
+  //lesson.dt AT TIME ZONE 'Europe/Moscow' as dt
+
 
   lessons.forEach(el => {
     const date = new Date(el.dt);
@@ -393,14 +603,12 @@ app.get('/infoForNewLesson', async (req, res) => {
       .replace(/\./, '')
       .replace(/\./, '')
       .replace(/\sг\s/g, ' ');
-    // console.log(formattedDate);
 
     let timeForSystem = formattedDate.slice(-5)
     let dateForSystem =date.toISOString().split('T')[0]
     el.timeForSystem = timeForSystem
     el.dateForSystem = dateForSystem
 
-    // console.log(formattedDate)
     const teacher: string = el.full_name;
     const words = teacher.split(" ");
     const teacherInitials = `${words[0]} ${words[1][0]}.${words[2][0]}.`;
@@ -415,8 +623,6 @@ app.get('/infoForNewLesson', async (req, res) => {
 
   const all = {'halls': halls, 'tp_lessons':tp_lessons, 'lessons':lessons}
   res.json(all)
-  // console.log(all)
-  // console.log(halls)
 })
 
 app.get('/teachers', async (req, res) => {
@@ -426,7 +632,8 @@ app.get('/teachers', async (req, res) => {
   if(!isNaN(Number(req.query.tp_lesson))){
     console.log('Число', req.query.tp_lesson)
     const tpLesson = Number(req.query.tp_lesson)
-    // console.log("TPLESSON", tpLesson)
+
+    // with SQL
     // const result = await prisma.$queryRaw`
     //   select t.full_name
     //   from specialty_of_teacher as s, teacher as t 
@@ -434,6 +641,7 @@ app.get('/teachers', async (req, res) => {
     //   and s.id_tp_lesson = ${tpLesson}
     // `
 
+    // same with Prisma
     const result = await prisma.specialty_of_teacher.findMany({
       where: {
         id_tp_lesson: tpLesson 
@@ -454,10 +662,10 @@ app.get('/teachers', async (req, res) => {
 
     const result = await prisma.$queryRaw`
     SELECT t.full_name, t.id
-FROM teacher as t
-INNER JOIN specialty_of_teacher ON t.id = specialty_of_teacher.id_teacher
-INNER JOIN tp_lesson ON tp_lesson.id = specialty_of_teacher.id_tp_lesson
-WHERE tp_lesson.name = ${ req.query.tp_lesson }
+    FROM teacher as t
+    INNER JOIN specialty_of_teacher ON t.id = specialty_of_teacher.id_teacher
+    INNER JOIN tp_lesson ON tp_lesson.id = specialty_of_teacher.id_tp_lesson
+    WHERE tp_lesson.name = ${ req.query.tp_lesson }
     `
 
     /* same query using prisma 
