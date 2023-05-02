@@ -47,13 +47,17 @@ app.get('/users', async (req, res) => {
 
 // main types of yoga
 app.get('/typesAndLessons', async (req, res) => {
-  
   interface Result {
     part?: number
     id?: number,
     dt: Date,
+    strDt?: string,
+    strTime?: string,
+    strTeacher?: string,
     full_name?: string,
     tp_lesson?: string,
+    id_tp_lesson?: number,
+    color?: string,
     discription?: string
   }
 
@@ -71,34 +75,82 @@ app.get('/typesAndLessons', async (req, res) => {
     SELECT lesson.id, 
         lesson.dt, 
         teacher.full_name, 
+        tp_lesson.id as id_tp_lesson,
         tp_lesson.name as tp_lesson
     FROM public.lesson
     INNER JOIN public.specialty_of_teacher ON lesson.id_specialty_of_teacher = specialty_of_teacher.id
     INNER JOIN public.teacher ON specialty_of_teacher.id_teacher = teacher.id
     INNER JOIN public.tp_lesson ON specialty_of_teacher.id_tp_lesson = tp_lesson.id
     WHERE public.lesson.dt BETWEEN (DATE_TRUNC('WEEK', CURRENT_DATE)) AND 
-                            (DATE_TRUNC('WEEK', CURRENT_DATE) + INTERVAL '6 days')
+                            (DATE_TRUNC('WEEK', CURRENT_DATE) + INTERVAL '7 days')
     ORDER BY lesson.dt;
   `
 // tp_lesson.discription 
 //  AT TIME ZONE 'Europe/Moscow'
-  // console.log("I'm in correct", lessons)
+  console.log("I'm in correct", lessons)
+
+
+  let colors : string[] = [
+    '#32a1ce', // blue
+    '#32CF7D', // green
+    '#CFCF32', // yellow
+    '#AF32CF', // purple
+    '#CF326E', // burgundy
+    '#CF3234', // red
+    '#CF9832', // orange
+  ]
 
   let lessonsWithDuplicates: Result[] = []
   // make dublicates for td
   lessons.forEach(lesson => {
-    Object.assign(lesson, {part: 0})
-    lessonsWithDuplicates.push(lesson)
+    let date = new Date(lesson.dt)
 
-    console.log(lesson)
-    for(let i = 1; i < 6; i++){ // занятие длится 1,5 часа 
-      let date = new Date(lesson.dt)
-      let newDate = new Date(date.setMinutes(date.getMinutes() + 15 * i))
-      lessonsWithDuplicates.push(
-        {part: i, id:lesson.id, full_name:lesson.full_name, 
-          tp_lesson:lesson.tp_lesson, dt: newDate
-        })
-    }
+    const formattedDate = date
+      .toLocaleString("ru-RU", {
+        day: "numeric",
+        month: "short",
+        timeZone: "Europe/Moscow",
+      })
+    
+    const formattedTime = date
+      .toLocaleString("ru-RU", {
+        hour: "numeric",
+        minute: "numeric",
+        timeZone: "Europe/Moscow",
+    })
+    
+    const teacher: string | undefined  = lesson.full_name;
+    if(teacher && lesson.id_tp_lesson){
+      const words = teacher.split(" ");
+      const teacherInitials = `${words[0]} ${words[1][0]}.${words[2][0]}.`;
+    
+      Object.assign(lesson, {
+        part: 0, 
+        strDt:formattedDate, 
+        strTime: formattedTime, 
+        strTeacher: teacherInitials,
+      })
+      lessonsWithDuplicates.push(lesson)
+
+      console.log(lesson)
+      for(let i = 1; i < 6; i++){ // занятие длится 1,5 часа 
+        let date = new Date(lesson.dt)
+        let newDate = new Date(date.setMinutes(date.getMinutes() + 15 * i))
+
+        lessonsWithDuplicates.push(
+          {
+            part: i, 
+            id: lesson.id, 
+            full_name: lesson.full_name, 
+            tp_lesson: lesson.tp_lesson, 
+            dt: newDate,
+            strDt: formattedDate, 
+            strTime: formattedTime,
+            strTeacher: teacherInitials,
+            color: colors[lesson.id_tp_lesson]
+          })
+      }
+    } 
   });
 
   lessonsWithDuplicates.sort((a, b) => {
@@ -142,20 +194,6 @@ app.get('/typesAndLessons', async (req, res) => {
     "22:00",
     "23:00",
     "24:00",
-    // "08:00",
-    // "09:00",
-    // "10:00",
-    // "11:00",
-    // "12:00",
-    // "13:00",
-    // "14:00",
-    // "15:00",
-    // "15:00",
-    // "17:00",
-    // "18:00",
-    // "19:00",
-    // "20:00",
-    // "21:00",
   ];
 
   let minutesForTable : String[] = ["0", "15", "30", "45"];
@@ -175,7 +213,7 @@ app.get('/typesAndLessons', async (req, res) => {
   mondayItterable.setDate(currentDay.getDate() - 1);
   let timeschtampForTd: Date[] = [];
 
-  // генерация массива со всеми class для td
+  // генерация массива со всеми timeschtamp для td
   hoursForTable.forEach((time) => {
     mondayItterable.setHours(+time.slice(0, 2));
     mondayItterable.setSeconds(0);
@@ -190,12 +228,10 @@ app.get('/typesAndLessons', async (req, res) => {
       mondayItterable.setDate(mondayItterable.getDate() - 7);
     });
   });
-  console.log(timeschtampForTd);
+  // console.log(timeschtampForTd);
 
   let mondayNumber = currentDay.getDate();
   let mondayMonth = months[currentDay.getMonth()];
-
-
   let datesOfCurrentWeek = [];
   datesOfCurrentWeek.push(mondayNumber + " " + mondayMonth);
   for (let i = 0; i < 6; i++) {
@@ -204,24 +240,12 @@ app.get('/typesAndLessons', async (req, res) => {
     let day = nextDay.getDate();
     datesOfCurrentWeek.push(day + " " + months[monday.getMonth()]);
   }
-  console.log(datesOfCurrentWeek);
-
-
+  // console.log(datesOfCurrentWeek);
 
   let scheduleForTable : Result[] = []
 
   timeschtampForTd.forEach(dt => {
-    // console.log(dt.toString(), lessonsWithDuplicates[0].dt.toString(), dt.toString() == lessonsWithDuplicates[0].dt.toString())
-    // console.log(dt)
-
     let lessonExists : boolean = false
-    // lessons.some(inObject);
-    // console.log(lessonExists)
-
-    // function inObject(lesson: any) {
-    //   return lesson.dt.toString() == dt.toString();
-      
-    // }
 
     for(let i = 0; i < lessonsWithDuplicates.length; i++){
       // console.log(dt, lessonsWithDuplicates[i].dt)
@@ -231,27 +255,15 @@ app.get('/typesAndLessons', async (req, res) => {
         break
       }
     }
-
-
-
-    // if (Object.values(lessonsWithDuplicates).indexOf(dt) > -1) {
-    //   console.log('has test1');
-    // }
-
-    // if (lessonsWithDuplicates.includes(dt)){
-    // if (dt.toString() == lessonsWithDuplicates[0].dt.toString()){
     if (!lessonExists){
       scheduleForTable.push({dt: dt})
-      // console.log('I FIND FIND',dt)
-      // lessonsWithDuplicates.shift();
-      // console.log('\n\n',lessonsWithDuplicates)
     }
   });
   console.log(scheduleForTable)
   console.log('endd')
 
-
-  let allDate = {tp_lessons, lessons, datesOfCurrentWeek, todayStr, hoursForTable, timeschtampForTd, scheduleForTable}
+  let allDate = {tp_lessons, datesOfCurrentWeek, todayStr, scheduleForTable}
+  // lessons,  timeschtampForTd,
 
   res.json(allDate)
 })
@@ -273,6 +285,7 @@ app.get('/attempt', async (req, res) => {
   //   where c.id = s.id_client
   //   and c.phone = '+7(111)111-11-11'`
   // )
+  console.log('was attempt', req.query.strDt, req.query.strTime)
   res.json(result)
 })
 
@@ -352,27 +365,37 @@ app.patch('/api/lessons', async (req, res) => {
     let inputsRealSubsequence = req.body.spanInnerHtmlNumbers
     let strDayOfWeek : string[] = inputsRealSubsequence.split(",")
 
-                      // console.log('strDayOfweek',strDayOfWeek);
+                      console.log('strDayOfweek',strDayOfWeek);
 
     // let strDayOfWeek : string[] = req.body.dayOfWeek
-    let strTimeOfDay : string[] = req.body.timeOfDay
+    let oldTimeOfDay : string[] = req.body.timeOfDay
+    let strTimeOfDay : string[] = []
+
+    oldTimeOfDay.forEach(el => {
+      let hours = +el.slice(0,2)
+      let minutes = el.slice(3)
+      hours += 3
+      strTimeOfDay.push(`${hours}:${minutes}`)
+    });
+    console.log('new TIME OF DAy', strTimeOfDay)
+    // let strTimeOfDay : string[] = req.body.timeOfDay
     let repeat: number = +req.body.reAmount; // кол-во занятий
     // let currentDay = new Date();
     let startYear : number = +req.body.dtStart.slice(0,4)
     let startMonth : number  = +req.body.dtStart.slice(5,7) - 1 
     let startDay : number = +req.body.dtStart.slice(8,10)
     let currentDay = new Date(startYear, startMonth, startDay);
-                      // console.log('current Day',currentDay)
+                      console.log('current Day',currentDay)
 
-                      // console.log('-----------------------------------------------------------------')
-                      // console.log('я собираю дату из этого', startYear, startMonth, startDay)
+                      console.log('-----------------------------------------------------------------')
+                      console.log('я собираю дату из этого', startYear, startMonth, startDay)
     // console.log('st_day', currentDay.toLocaleDateString("ru-RU"))
 
 
     strDayOfWeek.forEach((item: string, index: number) => {
       timetable.push({ day: strDayOfWeek[index] , time: strTimeOfDay[index] })
     });
-                      // console.log('timetable', timetable)
+                      console.log('timetable', timetable)
 
     while (repeat > 0) {
       let numCurrentDayOfWeek : number = currentDay.getDay()
@@ -691,6 +714,11 @@ app.get('/teachers', async (req, res) => {
 
 })
 
+app.patch('/api/book', async (req, res) => {
+  console.log(req.body)
+
+  res.send("0")
+})
 
 
 
