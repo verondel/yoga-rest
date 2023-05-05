@@ -48,9 +48,10 @@ app.get('/users', async (req, res) => {
 // main types of yoga
 app.get('/typesAndLessons', async (req, res) => {
   interface Result {
+    dt: Date,
     part?: number
     id?: number,
-    dt: Date,
+    dtTd?: Date,
     strDt?: string,
     strTime?: string,
     strTeacher?: string,
@@ -59,6 +60,7 @@ app.get('/typesAndLessons', async (req, res) => {
     id_tp_lesson?: number,
     color?: string,
     discription?: string
+    delBorder?: boolean
   }
 
   const tp_lessons = await prisma.tp_lesson.findMany(
@@ -92,33 +94,40 @@ app.get('/typesAndLessons', async (req, res) => {
 
   let colors : string[] = [
     '#32a1ce', // blue
-    '#32CF7D', // green
-    '#CFCF32', // yellow
+    '#32CF7D', // green   
     '#AF32CF', // purple
-    '#CF326E', // burgundy
-    '#CF3234', // red
     '#CF9832', // orange
+    '#CF326E',  // burgundy
+    '#CFCF32', // yellow
+    '#CF3234', // red
   ]
 
   let lessonsWithDuplicates: Result[] = []
   // make dublicates for td
   lessons.forEach(lesson => {
-    let date = new Date(lesson.dt)
+    let dtLesson : Date = new Date(lesson.dt)
+    let delBorder : boolean = (dtLesson.getMinutes() == 45) ? true : false
+    // console.log('==============================================================================================')
+    // console.log(dtLesson.getMinutes(), delBorder)
 
-    const formattedDate = date
+    const formattedDate = dtLesson
       .toLocaleString("ru-RU", {
         day: "numeric",
         month: "short",
-        timeZone: "Europe/Moscow",
+        // timeZone: "Europe/Moscow",
       })
+
     
-    const formattedTime = date
+    let formattedTime = dtLesson
       .toLocaleString("ru-RU", {
         hour: "numeric",
         minute: "numeric",
-        timeZone: "Europe/Moscow",
+        timeZone: "UTC",
     })
-    
+    // let formattedTime1 = lesson.dt.toString()
+    // console.log('--------------------------------------------------------------------------')
+    // console.log(dtLesson, formattedTime1)
+
     const teacher: string | undefined  = lesson.full_name;
     if(teacher && lesson.id_tp_lesson){
       const words = teacher.split(" ");
@@ -126,16 +135,23 @@ app.get('/typesAndLessons', async (req, res) => {
     
       Object.assign(lesson, {
         part: 0, 
-        strDt:formattedDate, 
+        dtTd : dtLesson,
+        strDt: formattedDate, 
         strTime: formattedTime, 
         strTeacher: teacherInitials,
+        color: colors[lesson.id_tp_lesson],
+        delBorder: delBorder
       })
       lessonsWithDuplicates.push(lesson)
 
       console.log(lesson)
+
+      // parts from 1-6 
       for(let i = 1; i < 6; i++){ // занятие длится 1,5 часа 
         let date = new Date(lesson.dt)
         let newDate = new Date(date.setMinutes(date.getMinutes() + 15 * i))
+        let nextDelBorder : boolean = (newDate.getMinutes() == 45) ? true : false
+        console.log('VERAERA', newDate.getMinutes(), nextDelBorder)
 
         lessonsWithDuplicates.push(
           {
@@ -144,10 +160,12 @@ app.get('/typesAndLessons', async (req, res) => {
             full_name: lesson.full_name, 
             tp_lesson: lesson.tp_lesson, 
             dt: newDate,
+            dtTd : dtLesson,
             strDt: formattedDate, 
             strTime: formattedTime,
             strTeacher: teacherInitials,
-            color: colors[lesson.id_tp_lesson]
+            color: colors[lesson.id_tp_lesson],
+            delBorder: nextDelBorder
           })
       }
     } 
@@ -272,7 +290,17 @@ app.get('/typesAndLessons', async (req, res) => {
 
 // main БУДУЩАЯ попытка забронировать
 app.get('/attempt', async (req, res) => {
-  const result = await prisma.$queryRaw`
+
+  interface Result{
+    id: number,
+    dt_begin: Date,
+    dt_end: Date,
+    amount: number,
+    full_name: string,
+    phone: string,
+  }
+
+  const result : Result[] = await prisma.$queryRaw`
     select s.dt_begin, s.dt_end, s.amount, c.full_name, c.id, c.phone
     from client as c, subscribe as s
     where c.id = s.id_client
@@ -285,8 +313,12 @@ app.get('/attempt', async (req, res) => {
   //   where c.id = s.id_client
   //   and c.phone = '+7(111)111-11-11'`
   // )
-  console.log('was attempt', req.query.strDt, req.query.strTime)
-  res.json(result)
+  console.log('was attempt', result, Object.keys(result).length)
+  if (Object.keys(result).length == 0){
+    res.json('-1')
+  } else {
+    res.json(result)
+  }
 })
 
 
@@ -321,9 +353,6 @@ app.post('/auth', async (req, res) => {
 
 })
 
-// app.patch('/api/lessons', async (req, res) => {
-//   console.log('i have 1',req.body)
-// });
 
 app.patch('/api/lessons', async (req, res) => {
   console.log('ДОБАВЛЯЮ ЗАНЯТИЯ')
@@ -365,7 +394,7 @@ app.patch('/api/lessons', async (req, res) => {
     let inputsRealSubsequence = req.body.spanInnerHtmlNumbers
     let strDayOfWeek : string[] = inputsRealSubsequence.split(",")
 
-                      console.log('strDayOfweek',strDayOfWeek);
+    // console.log('strDayOfweek',strDayOfWeek);
 
     // let strDayOfWeek : string[] = req.body.dayOfWeek
     let oldTimeOfDay : string[] = req.body.timeOfDay
@@ -385,12 +414,12 @@ app.patch('/api/lessons', async (req, res) => {
     let startMonth : number  = +req.body.dtStart.slice(5,7) - 1 
     let startDay : number = +req.body.dtStart.slice(8,10)
     let currentDay = new Date(startYear, startMonth, startDay);
-                      console.log('current Day',currentDay)
+    
+    // console.log('current Day',currentDay)
 
-                      console.log('-----------------------------------------------------------------')
-                      console.log('я собираю дату из этого', startYear, startMonth, startDay)
+    // console.log('-----------------------------------------------------------------')
+    // console.log('я собираю дату из этого', startYear, startMonth, startDay)
     // console.log('st_day', currentDay.toLocaleDateString("ru-RU"))
-
 
     strDayOfWeek.forEach((item: string, index: number) => {
       timetable.push({ day: strDayOfWeek[index] , time: strTimeOfDay[index] })
@@ -563,22 +592,38 @@ app.post('/api/lessons', async (req, res) => {
 
 
 app.patch("/api/registration", async (req, res) => {
-
   console.log(req.body)
-  // const user = await prisma.user.create({
-  //   data: {
-  //     email: 'elsa@prisma.io',
-  //     name: 'Elsa Prisma',
-  //   },
-  // })
+  const client = await prisma.client.create({
+    data: {
+      full_name: req.body.fullName,
+      dt_birthday: req.body.dtBirth,
+      passport: req.body.passport,
+      phone: req.body.phone,
+      email: req.body.email      
+    },
+  })
+
+  interface idFromDb{
+    id : string
+  }
+
+  // let forTest = 'НОВЫЙ Им Отч'
+
+  const idFromDb : idFromDb[] = await prisma.$queryRaw`
+    SELECT c.id
+    FROM public.client as c
+    WHERE c.full_name = ${req.body.fullName}
+  `
+  // WHERE c.full_name = ${req.body.fullName}
+  // WHERE c.full_name = ${forTest}
+
+  let fullNameArr = req.body.fullName.split(' ')
+  let name = fullNameArr[1]
+  let id = idFromDb[0].id
+  console.log(name, id)
+
+  res.send({id: id, name: name})
 })
-
-
-// app.patch('/api/teachers', async (req, res) => {
-//   console.log('body', req.files)
-//   res.send(req.file)
-// })
-
 
 app.get('/infoForNewLesson', async (req, res) => {
   const halls = await prisma.hall.findMany();
@@ -596,7 +641,7 @@ app.get('/infoForNewLesson', async (req, res) => {
 
   const lessons : Result[] = await prisma.$queryRaw`
     SELECT lesson.id, 
-      lesson.dt  as dt, 
+      lesson.dt as dt, 
       teacher.full_name as full_name, 
       tp_lesson.name as tp_lesson,
       hall.capacity as hall
@@ -610,7 +655,6 @@ app.get('/infoForNewLesson', async (req, res) => {
   `
   //lesson.dt AT TIME ZONE 'Europe/Moscow' as dt
 
-
   lessons.forEach(el => {
     const date = new Date(el.dt);
     const formattedDate = date
@@ -620,7 +664,8 @@ app.get('/infoForNewLesson', async (req, res) => {
         hour: "numeric",
         year: "numeric",
         minute: "numeric",
-        timeZone: "Europe/Moscow",
+        // timeZone: "Europe/Moscow",
+        timeZone: "UTC",
       })
       .replace(/,\s*/, ' ')
       .replace(/\./, '')
@@ -628,7 +673,7 @@ app.get('/infoForNewLesson', async (req, res) => {
       .replace(/\sг\s/g, ' ');
 
     let timeForSystem = formattedDate.slice(-5)
-    let dateForSystem =date.toISOString().split('T')[0]
+    let dateForSystem = date.toISOString().split('T')[0]
     el.timeForSystem = timeForSystem
     el.dateForSystem = dateForSystem
 
@@ -638,11 +683,9 @@ app.get('/infoForNewLesson', async (req, res) => {
 
     el.dt = formattedDate;
     el.full_name = teacherInitials ;
-
-
   });
 
-  // console.log('lessons', lessons);
+  console.log('lessons', lessons);
 
   const all = {'halls': halls, 'tp_lessons':tp_lessons, 'lessons':lessons}
   res.json(all)
@@ -715,12 +758,126 @@ app.get('/teachers', async (req, res) => {
 })
 
 app.patch('/api/book', async (req, res) => {
-  console.log(req.body)
+  // Первое пробное занятие
+  console.log('/api/book', req.body.data)
+  let trialLesson : boolean = req.body.data.trialLesson
+  let id_client =  req.body.data.id_client
+  let id_lesson = req.body.data.id_lesson
+  let timeLesson = req.body.data.timeLesson
+
+  console.log(trialLesson == true)
+
+  if (trialLesson){
+    const subscribe = await prisma.subscribe.create({
+      data: {
+        id_client: id_client,
+        dt_begin: timeLesson,
+        dt_end: timeLesson,
+        amount: 0,
+      }
+    })
+    console.log('subscribe', subscribe.id)
+    const book = await prisma.book.create({
+      data: {
+        id_subscribe: subscribe.id,
+        id_lesson: id_lesson,
+      }
+    })
+    console.log(book)    
+
+  }else{
+    let amount = req.body.data.amount
+    console.log('amount', amount)
+
+    interface Subscribe {
+      id: number,
+    }
+
+    const subscribeId : Subscribe[] = await prisma.$queryRaw`
+      SELECT s.id
+      FROM subscribe as s
+      WHERE s.id_client = ${id_client}
+    `
+    console.log('idSubscribe', subscribeId[0])
+
+    const book = await prisma.book.create({
+      data: {
+        id_subscribe: subscribeId[0].id,
+        id_lesson: id_lesson,
+      }
+    })
+    console.log('book ', book)
+
+    const updateAmount = await prisma.subscribe.update({
+      where: {
+        id : subscribeId[0].id,
+      },
+      data: {
+        amount: amount - 1,
+      },
+    })
+    console.log('upd Amount', updateAmount)
+  }
+
+  // console.log(req.body.data)
 
   res.send("0")
 })
 
 
+app.patch('/api/subsctiption', async (req, res) => {
+  console.log('/api/subsctiption', req.body)
+  let id_client = +req.body.id_client
+  let type = +req.body.type
+  let dtLesson = new Date(req.body.dtLesson) 
+  let dtLessonTS = dtLesson.getTime()
+
+  let dt_begin = dtLesson
+  let dt_end : Date = dtLesson // далее в if изменится 
+  let amount = 0
+  
+  if (type == 1){
+    dt_end = new Date(dtLesson)
+  }else if (type == 4){
+    dt_end = new Date(dtLessonTS + 2678400000) // 31 день - 1 месяц
+    amount = 4
+    // console.log(new Date(dtLessonTS), dt_end, amount)
+  }else if (type == 6){
+    dt_end = new Date(dtLessonTS + 2678400000) // 31 день - 1 месяц
+    amount = 6
+  }else if(type == 8){
+    dt_end = new Date(dtLessonTS + 5270400000) // 61 день - 2 месяца
+    amount = 8
+  }else if(type == 12){
+    dt_end = new Date(dtLessonTS + 5270400000) // 61 день - 2 месяца
+    amount = 12
+    // console.log(new Date(dtLessonTS), dt_end, amount)
+  }
+
+  interface Subscribe {
+    id: number,
+  }
+
+  const subscribeId : Subscribe[] = await prisma.$queryRaw`
+    SELECT s.id
+    FROM subscribe as s
+    WHERE s.id_client = ${id_client}
+  `
+  console.log('subscribeId', subscribeId)
+
+  const updSubscribe = await prisma.subscribe.update({
+    where: {
+      id : subscribeId[0].id,
+    },
+    data: {
+      dt_begin: dt_begin,
+      dt_end: dt_end,
+      amount: amount,
+    },
+  })
+  console.log('upd', updSubscribe)
+  res.send("0")
+})
 
 // app.get('/admin1', async (req, res) => {
 //   res.cookie('user', 'admin', {
