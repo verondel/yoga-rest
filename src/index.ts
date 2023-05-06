@@ -563,8 +563,12 @@ app.post('/api/lessons', async (req, res) => {
   let minute = req.body.time.slice(3)
   let hall = +req.body.hall
 
-  let lessonTimeschtamp = new Date(year, month, day, hour, minute)
-  console.log(lessonTimeschtamp)
+  let lessonTS = new Date(year, month, day, hour, minute).getTime()
+  lessonTS += 10800000 // добавить 3 часа 
+  let lessonDt = new Date(lessonTS)
+
+  
+  console.log(lessonDt)
 
   const specialty_of_teacher : Specialty[] = await prisma.$queryRaw`
     SELECT id 
@@ -580,7 +584,7 @@ app.post('/api/lessons', async (req, res) => {
       id: +req.body.ID,
     },
     data: {
-      dt: lessonTimeschtamp,
+      dt: lessonDt,
       id_hall: hall,
       id_specialty_of_teacher: SOT
     },
