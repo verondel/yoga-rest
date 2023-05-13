@@ -23,13 +23,13 @@ app.use(upload.array());
 app.use(express.urlencoded()); // Parse URL-encoded bodies (as sent by HTML forms)
 app.use(express.json()) // Parse JSON bodies (as sent by API clients)
 
-var corsOptions = {
-  origin: 'http://localhost/3000',
-  optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
-}
+// var corsOptions = {
+//   origin: 'http://localhost/3000',
+//   optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
+// }
 
-app.use(cors(corsOptions))
-// app.use(cors())
+// app.use(cors(corsOptions))
+app.use(cors())
 
 app.use(express.json())
 
