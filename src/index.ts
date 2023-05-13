@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client'
 import express from 'express'
 
 var cors = require('cors')
+let tester: number = 0
 
 const prisma = new PrismaClient()
 const app = express()
@@ -22,13 +23,13 @@ app.use(upload.array());
 app.use(express.urlencoded()); // Parse URL-encoded bodies (as sent by HTML forms)
 app.use(express.json()) // Parse JSON bodies (as sent by API clients)
 
-// var corsOptions = {
-//   origin: 'http://localhost/3000',
-//   optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
-// }
+var corsOptions = {
+  origin: 'http://localhost/3000',
+  optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
+}
 
-// app.use(cors(corsOptions))
-app.use(cors())
+app.use(cors(corsOptions))
+// app.use(cors())
 
 app.use(express.json())
 
@@ -37,6 +38,31 @@ app.use(bodyParser())
 // app.use(bodyParser.urlencoded({ extended: false }))
 // parse application/json
 app.use(bodyParser.json())
+
+//--------------------------------------------------------------
+
+app.get('/sse-endpoint', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  // res.setHeader('Cache-Control', 'no-cache');
+  // res.setHeader('Connection', 'keep-alive');
+  res.write(`event: message\ndata: ${tester}\n\n`);
+  send(res)
+});
+
+function send(res: any){
+  res.write(`event: message\ndata: ${tester}\n\n`);
+  tester = tester == 1 ? 0 : 0 
+  setTimeout(() => send(res), 1000)
+}
+
+// -----------------------------------------------------------------
+
+
+
+
+
+
+
 
 // ... your REST API routes will go here
 // страница users
@@ -325,7 +351,7 @@ app.get('/attempt', async (req, res) => {
 
 
 app.post('/auth', async (req, res) => {
-  console.log('я получил = ', req.body.params)
+  // console.log('я получил = ', req.body.params)
   // console.log('env KEY', process.env.TOKEN_KEY)
   // console.log(process.env.PASSWORD == md5(req.body.params.password + process.env.SOLE))
 
@@ -356,7 +382,7 @@ app.post('/auth', async (req, res) => {
 
 
 app.patch('/api/lessons', async (req, res) => {
-  console.log('ДОБАВЛЯЮ ЗАНЯТИЯ')
+  // console.log('ДОБАВЛЯЮ ЗАНЯТИЯ')
   // console.log('length', Object.keys(req.body).length)
   // if(req.body.time == "__:__")
 
@@ -526,6 +552,7 @@ app.patch('/api/lessons', async (req, res) => {
       })
     });
     console.log('я в конце', req.body)
+    tester = 1
     res.send(req.body)
   } else {
     console.log('Форма заполнена не до конца')
@@ -538,13 +565,12 @@ app.patch('/api/lessons', async (req, res) => {
 
 app.delete('/api/lessons', async (req, res) => {
   console.log(req.body)
-
-  // console.log(req.data)
   const deleteLesson = await prisma.lesson.delete({
     where: {
       id: req.body.id,
     },
   })
+  tester = 1
   res.send("DELETE Request Called")
 })
 
@@ -559,30 +585,23 @@ app.post('/api/lessons', async (req, res) => {
   interface Specialty {
     id: number,
   }
-
   let year = req.body.dt.slice(0, 4)
   let month = req.body.dt.slice(5, 7) - 1
   let day = req.body.dt.slice(8)
   let hour = req.body.time.slice(0, 2)
   let minute = req.body.time.slice(3)
   let hall = +req.body.hall
-
   let lessonTS = new Date(year, month, day, hour, minute).getTime()
   lessonTS += 10800000 // добавить 3 часа 
   let lessonDt = new Date(lessonTS)
-
-
-  console.log(lessonDt)
 
   const specialty_of_teacher: Specialty[] = await prisma.$queryRaw`
     SELECT id 
     FROM specialty_of_teacher sot 
     WHERE id_tp_lesson = 2 and id_teacher = 3
   `
-
   let SOT = +specialty_of_teacher[0].id
   console.log('new SOT', SOT)
-
   const updateLesson = await prisma.lesson.update({
     where: {
       id: +req.body.ID,
@@ -593,10 +612,9 @@ app.post('/api/lessons', async (req, res) => {
       id_specialty_of_teacher: SOT
     },
   })
-
+  tester = 1
   res.send(req.query)
 })
-
 
 
 app.patch("/api/registration", async (req, res) => {
@@ -638,8 +656,8 @@ app.patch("/api/registration", async (req, res) => {
   let fullNameArr = req.body.fullName.split(' ')
   let name = fullNameArr[1]
   let id = idFromDb[0].id
-  console.log(name, id)
-
+  // console.log(name, id)
+  tester = 1
   res.send({ id: id, name: name })
 })
 
