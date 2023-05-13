@@ -41,19 +41,19 @@ app.use(bodyParser.json())
 
 //--------------------------------------------------------------
 
-app.get('/sse-endpoint', (req, res) => {
-  res.setHeader('Content-Type', 'text/event-stream');
-  // res.setHeader('Cache-Control', 'no-cache');
-  // res.setHeader('Connection', 'keep-alive');
-  res.write(`event: message\ndata: ${tester}\n\n`);
-  send(res)
-});
+// app.get('/sse-endpoint', (req, res) => {
+//   res.setHeader('Content-Type', 'text/event-stream');
+//   // res.setHeader('Cache-Control', 'no-cache');
+//   // res.setHeader('Connection', 'keep-alive');
+//   res.write(`event: message\ndata: ${tester}\n\n`);
+//   send(res)
+// });
 
-function send(res: any){
-  res.write(`event: message\ndata: ${tester}\n\n`);
-  tester = tester == 1 ? 0 : 0 
-  setTimeout(() => send(res), 1000)
-}
+// function send(res: any){
+//   res.write(`event: message\ndata: ${tester}\n\n`);
+//   tester = tester == 1 ? 0 : 0 
+//   setTimeout(() => send(res), 1000)
+// }
 
 // -----------------------------------------------------------------
 
