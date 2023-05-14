@@ -43,12 +43,12 @@ app.get('/sse-endpoint', (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   // res.setHeader('Cache-Control', 'no-cache');
   // res.setHeader('Connection', 'keep-alive');
-  res.write(`event: message\ndata: ${tester}\n\n`);
+  // res.write(`event: message\ndata: ${tester}\n\n`);
   send(res)
 });
 
 function send(res: any){
-  res.write(`event: message\ndata: ${tester}\n\n`);
+  // res.write(`event: message\ndata: ${tester}\n\n`);
   tester = tester == 1 ? 0 : 0 
   setTimeout(() => send(res), 1000)
 }
@@ -304,7 +304,7 @@ app.get('/typesAndLessons', async (req, res) => {
 
 
 
-// main БУДУЩАЯ попытка забронировать
+// main info for booking
 app.get('/attempt', async (req, res) => {
 
   interface Result {
@@ -862,6 +862,7 @@ app.patch('/api/subsctiption', async (req, res) => {
     WHERE s.id_client = ${id_client}
   `
   console.log('subscribeId', subscribeId)
+  console.log('AMOUNT OF LESSONS = ', amount)
 
   const updSubscribe = await prisma.subscribe.update({
     where: {
@@ -874,7 +875,7 @@ app.patch('/api/subsctiption', async (req, res) => {
     },
   })
   console.log('upd', updSubscribe)
-  res.send("0")
+  res.json({dt_begin: dt_begin, dt_end:dt_end, amount:amount})
 })
 
 // app.get('/admin1', async (req, res) => {
