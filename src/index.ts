@@ -39,30 +39,19 @@ app.use(bodyParser())
 // parse application/json
 app.use(bodyParser.json())
 
-//--------------------------------------------------------------
+app.get('/sse-endpoint', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  // res.setHeader('Cache-Control', 'no-cache');
+  // res.setHeader('Connection', 'keep-alive');
+  res.write(`event: message\ndata: ${tester}\n\n`);
+  send(res)
+});
 
-// app.get('/sse-endpoint', (req, res) => {
-//   res.setHeader('Content-Type', 'text/event-stream');
-//   // res.setHeader('Cache-Control', 'no-cache');
-//   // res.setHeader('Connection', 'keep-alive');
-//   res.write(`event: message\ndata: ${tester}\n\n`);
-//   send(res)
-// });
-
-// function send(res: any){
-//   res.write(`event: message\ndata: ${tester}\n\n`);
-//   tester = tester == 1 ? 0 : 0 
-//   setTimeout(() => send(res), 1000)
-// }
-
-// -----------------------------------------------------------------
-
-
-
-
-
-
-
+function send(res: any){
+  res.write(`event: message\ndata: ${tester}\n\n`);
+  tester = tester == 1 ? 0 : 0 
+  setTimeout(() => send(res), 1000)
+}
 
 // ... your REST API routes will go here
 // страница users
@@ -386,7 +375,6 @@ app.patch('/api/lessons', async (req, res) => {
   // console.log('length', Object.keys(req.body).length)
   // if(req.body.time == "__:__")
 
-
   if (Object.keys(req.body).length == 9) {
     //TODO если не 9 то отсылаем обратно
     // day: 0 - вс, 1 - пн ... 6 - сб
@@ -425,8 +413,6 @@ app.patch('/api/lessons', async (req, res) => {
     let strDayOfWeek: string[] = inputsRealSubsequence.split(",")
 
     // console.log('strDayOfweek',strDayOfWeek);
-
-    // let strDayOfWeek : string[] = req.body.dayOfWeek
     let oldTimeOfDay: string[] = req.body.timeOfDay
     let strTimeOfDay: string[] = []
 
@@ -437,9 +423,7 @@ app.patch('/api/lessons', async (req, res) => {
       strTimeOfDay.push(`${hours}:${minutes}`)
     });
     console.log('new TIME OF DAy', strTimeOfDay)
-    // let strTimeOfDay : string[] = req.body.timeOfDay
     let repeat: number = +req.body.reAmount; // кол-во занятий
-    // let currentDay = new Date();
     let startYear: number = +req.body.dtStart.slice(0, 4)
     let startMonth: number = +req.body.dtStart.slice(5, 7) - 1
     let startDay: number = +req.body.dtStart.slice(8, 10)
@@ -465,40 +449,14 @@ app.patch('/api/lessons', async (req, res) => {
       if (strDayOfWeek.includes(currentDayOfWeek)) {
         // console.log('stage 2', strDayOfWeek, ' includes', currentDayOfWeek)
         let index: number = strDayOfWeek.indexOf(currentDayOfWeek);
-        // console.log('index now is ', index)
-
-        // let hours : number = +(strTimeOfDay[index].slice(0,2))
-        // let minutes : number = +(strTimeOfDay[index].slice(3, 5))
-
-        // currentDay.setHours(hours); // изменить часы
-        // currentDay.setMinutes(minutes);
-        // currentDay.setSeconds(0);
-
         // console.log('cd', currentDay.toLocaleDateString("ru-RU")+ ' ' + strTimeOfDay[index]);
         lessonsDays.push(
-          // new Date(currentDay)
-          // new Intl.DateTimeFormat("ru-RU").format(currentDay)
           currentDay.toLocaleDateString("ru-RU") + ' ' + strTimeOfDay[index]
         );
         repeat--;
       }
       currentDay.setDate(currentDay.getDate() + 1); // добавляем 1 день
     }
-    // console.log('your lessons plan', lessonsDays)
-    // const result = await prisma.specialty_of_teacher.findMany({
-    //   where: {
-    //     id_tp_lesson: tpLesson 
-    //   },
-    //   select: {
-    //     teacher: {
-    //       select: {
-    //         id: true,
-    //         full_name: true
-    //       }
-    //     }
-    //   }
-    // });
-
     let teacherId: number = +req.body.teacher;
     let tp_lessonId: number = +req.body.tp_lesson;
     let id_hall: number = +req.body.hall
@@ -565,18 +523,23 @@ app.patch('/api/lessons', async (req, res) => {
 
 app.delete('/api/lessons', async (req, res) => {
   console.log(req.body)
+
+  let id_lesson = req.body.id
+  const deleteBooks = await prisma.book.deleteMany({
+    where: {
+      id_lesson: id_lesson,
+    },
+  })
+
   const deleteLesson = await prisma.lesson.delete({
     where: {
-      id: req.body.id,
+      id: id_lesson,
     },
   })
   tester = 1
   res.send("DELETE Request Called")
 })
 
-app.get('/api/lessons', async (req, res) => {
-
-})
 
 // CHANGE LESSON
 app.post('/api/lessons', async (req, res) => {
@@ -594,11 +557,13 @@ app.post('/api/lessons', async (req, res) => {
   let lessonTS = new Date(year, month, day, hour, minute).getTime()
   lessonTS += 10800000 // добавить 3 часа 
   let lessonDt = new Date(lessonTS)
+  let id_teacher = +req.body.teacher
+  let id_tp_lesson = +req.body.tp_lesson
 
   const specialty_of_teacher: Specialty[] = await prisma.$queryRaw`
     SELECT id 
     FROM specialty_of_teacher sot 
-    WHERE id_tp_lesson = 2 and id_teacher = 3
+    WHERE id_tp_lesson = ${id_tp_lesson} and id_teacher = ${id_teacher}
   `
   let SOT = +specialty_of_teacher[0].id
   console.log('new SOT', SOT)
@@ -633,23 +598,11 @@ app.patch("/api/registration", async (req, res) => {
     id: string
   }
 
-  // let forTest = 'НОВЫЙ Им Отч'
-
   const idFromDb: idFromDb[] = await prisma.$queryRaw`
     SELECT c.id
     FROM public.client as c
     WHERE c.full_name = ${req.body.fullName}
   `
-
-  // const idFromDb: idFromDb[]= await prisma.client.findMany({
-  //   select: {
-  //     id: true
-  //   },
-  //   where: {
-  //     full_name: req.body.fullName
-  //   }
-  // });
-
   // WHERE c.full_name = ${req.body.fullName}
   // WHERE c.full_name = ${forTest}
 
