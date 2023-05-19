@@ -39,18 +39,38 @@ app.use(bodyParser())
 // parse application/json
 app.use(bodyParser.json())
 
+interface Pages {
+  [hash: string]: number;
+}
+let allPages : Pages = {'hello':1}
+
 app.get('/sse-endpoint', (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
-  // res.setHeader('Cache-Control', 'no-cache');
-  // res.setHeader('Connection', 'keep-alive');
-  // res.write(`event: message\ndata: ${tester}\n\n`);
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.write(`event: message\ndata: ${JSON.stringify(allPages)}\n\n`);
   send(res)
+  // console.log(allPages)
+  for (const key in allPages) {
+    allPages[key] = 0;
+    if (allPages[key] == 1){
+      delete allPages[key]
+    }
+    // if (allPages.hasOwnProperty(key)) {
+    //   delete allPages[key];
+    // }
+  }
 });
 
 function send(res: any){
-  // res.write(`event: message\ndata: ${tester}\n\n`);
-  tester = tester == 1 ? 0 : 0 
-  setTimeout(() => send(res), 1000)
+  // console.log(allPages)
+  // for (const key in allPages) {
+  //   if (allPages[key] !== 0) {
+  //     console.log(`${key}: ${allPages[key]}`);
+  //   }
+  // }
+  res.write(`event: message\ndata: ${JSON.stringify(allPages)}\n\n`);
+  setTimeout(() => send(res), 2000)
 }
 
 // ... your REST API routes will go here
@@ -296,7 +316,12 @@ app.get('/typesAndLessons', async (req, res) => {
   // console.log('schedule for table', scheduleForTable)
   // console.log('endd')
 
-  let allDate = { tp_lessons, datesOfCurrentWeek, todayStr, scheduleForTable }
+  const timestamp = Date.now().toString();
+  const hash : string = md5(timestamp).toString();
+  allPages[hash] = 0
+  console.log(allPages)
+  
+  let allDate = { tp_lessons, datesOfCurrentWeek, todayStr, scheduleForTable, hash }
   // lessons,  timeschtampForTd,
 
   res.json(allDate)
@@ -511,6 +536,9 @@ app.patch('/api/lessons', async (req, res) => {
     });
     console.log('я в конце', req.body)
     tester = 1
+    for (const key in allPages) {
+      allPages[key] = 1;
+    }
     res.send(req.body)
   } else {
     console.log('Форма заполнена не до конца')
@@ -537,6 +565,9 @@ app.delete('/api/lessons', async (req, res) => {
     },
   })
   tester = 1
+  for (const key in allPages) {
+    allPages[key] = 1;
+  }
   res.send("DELETE Request Called")
 })
 
@@ -578,6 +609,10 @@ app.post('/api/lessons', async (req, res) => {
     },
   })
   tester = 1
+  for (const key in allPages) {
+    allPages[key] = 1;
+  }
+  console.log('CHANGE HGJFJF', allPages)
   res.send(req.query)
 })
 
@@ -611,6 +646,9 @@ app.patch("/api/registration", async (req, res) => {
   let id = idFromDb[0].id
   // console.log(name, id)
   tester = 1
+  for (const key in allPages) {
+    allPages[key] = 1;
+  }
   res.send({ id: id, name: name })
 })
 
@@ -681,6 +719,7 @@ app.get('/infoForNewLesson', async (req, res) => {
 })
 
 app.get('/teachers', async (req, res) => {
+  console.log('was asked')
   console.log(isNaN(Number("Хатха")), isNaN(Number(req.query.tp_lesson)))
   console.log(!isNaN(Number("1")), !isNaN(Number(req.query.tp_lesson)))
 
