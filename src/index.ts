@@ -49,7 +49,7 @@ app.get('/sse-endpoint', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
   res.write(`event: message\ndata: ${JSON.stringify(allPages)}\n\n`);
-  console.log(123123)
+  // console.log(123123)
   send(res)
   // console.log(allPages)
   // for (const key in allPages) {
@@ -64,18 +64,14 @@ app.get('/sse-endpoint', (req, res) => {
 });
 
 app.post('/sse-endpoint', (req, res) => {
-  console.log('------------------------------------------------')
-  console.log(allPages)
-  console.log(req.body)
   if (allPages.hasOwnProperty(req.body.hash)) {
     delete allPages[req.body.hash]
-    // allPages[req.body.hash] = 0;
   } 
   res.send('hel lo')
 })
 
 function send(res: any){
-  console.log(allPages)
+  // console.log(allPages)
   // for (const key in allPages) {
   //   if (allPages[key] !== 0) {
   //     console.log(`${key}: ${allPages[key]}`);
@@ -94,7 +90,7 @@ app.get('/users', async (req, res) => {
 
 // main types of yoga
 app.get('/typesAndLessons', async (req, res) => {
-  console.log('reboot')
+  // console.log('reboot')
   interface Result {
     dt: Date,
     part?: number
@@ -658,10 +654,10 @@ app.patch("/api/registration", async (req, res) => {
   let name = fullNameArr[1]
   let id = idFromDb[0].id
   // console.log(name, id)
-  tester = 1
-  for (const key in allPages) {
-    allPages[key] = 1;
-  }
+  // tester = 1
+  // for (const key in allPages) {
+  //   allPages[key] = 1;
+  // }
   res.send({ id: id, name: name })
 })
 
