@@ -5,7 +5,7 @@ This is a REST API for a yoga site where users can register and book classes, an
 ## Installation
 
 1.  Clone the repository:
-    `git clone https://github.com/<username>/<repository>.git`
+    `git clone https://github.com/verondel/yoga-rest.git`
 2.  Install dependencies:
     `npm install`
 3.  Create a `.env` file in the project root with the following contents:
