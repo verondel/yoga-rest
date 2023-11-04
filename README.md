@@ -12,9 +12,12 @@ This is a REST API for a yoga site where users can register and book classes, an
 
     ```
     DATABASE_URL=postgresql://<username>:<password>@<hostname>:<port>/<database>
+    # example
+    # DATABASE_URL="postgresql://postgres:1@192.168.0.1:5432/yoga_db?schema=public"
     LOGIN = 'admin'
     PASSWORD = 'c93ccd78b2076528346216b3b2f701e6'
     SOLE = '1234'
+    TOKEN_KEY = '123'
     ```
     
 4.  Run database migrations:
