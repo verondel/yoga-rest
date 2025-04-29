@@ -4,6 +4,8 @@ import express from 'express'
 var cors = require('cors')
 let tester: number = 0
 
+const DATABASE_URL = process.env.DATABASE_URL;
+
 const prisma = new PrismaClient()
 const app = express()
 
@@ -44,7 +46,12 @@ app.use(bodyParser.json())
 interface Pages {
   [hash: string]: number;
 }
-let allPages: Pages = { 'hello': 1 }
+
+function send(res: any) {
+  res.write(`event: message\ndata: ${JSON.stringify(allPages)}\n\n`);
+  setTimeout(() => send(res), 2000)
+}
+
 
 // страница users
 app.get('/users', async (req, res) => {
@@ -428,9 +435,6 @@ app.patch('/api/lessons', async (req, res) => {
       })
     });
     tester = 1
-    for (const key in allPages) {
-      allPages[key] = 1;
-    }
     res.send(req.body)
   } else {
     res.send('-1') //'Форма заполнена не до конца
@@ -453,9 +457,6 @@ app.delete('/api/lessons', async (req, res) => {
     },
   })
   tester = 1
-  for (const key in allPages) {
-    allPages[key] = 1;
-  }
   res.send("DELETE Request Called")
 })
 
@@ -494,10 +495,6 @@ app.post('/api/lessons', async (req, res) => {
       id_specialty_of_teacher: SOT
     },
   })
-
-  for (const key in allPages) {
-    allPages[key] = 1;
-  }
 
   res.send(req.query)
 })
@@ -737,6 +734,6 @@ app.patch('/api/subsctiption', async (req, res) => {
 
 
 
-app.listen(3001, () =>
-  console.log('REST API server ready at: http://localhost:3001'),
+app.listen(3001, '0.0.0.0', () =>
+  console.log('REST API server ready at: http://0.0.0.0:3001'),
 )
