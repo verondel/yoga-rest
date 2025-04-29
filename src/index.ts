@@ -44,28 +44,7 @@ app.use(bodyParser.json())
 interface Pages {
   [hash: string]: number;
 }
-let allPages : Pages = {'hello':1}
-
-app.get('/sse-endpoint', (req, res) => {
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.write(`event: message\ndata: ${JSON.stringify(allPages)}\n\n`);
-  send(res)
-});
-
-app.post('/sse-endpoint', (req, res) => {
-  if (allPages.hasOwnProperty(req.body.hash)) {
-    delete allPages[req.body.hash]
-  } 
-  res.send('hel lo')
-})
-
-function send(res: any){
-  res.write(`event: message\ndata: ${JSON.stringify(allPages)}\n\n`);
-  setTimeout(() => send(res), 2000)
-}
-
+let allPages: Pages = { 'hello': 1 }
 
 // страница users
 app.get('/users', async (req, res) => {
@@ -285,7 +264,7 @@ app.get('/typesAndLessons', async (req, res) => {
   });
 
   const timestamp = Date.now().toString();
-  const hash : string = md5(timestamp).toString();
+  const hash: string = md5(timestamp).toString();
   allPages[hash] = 0
 
   let allDate = { tp_lessons, datesOfCurrentWeek, todayStr, scheduleForTable, hash }
@@ -753,7 +732,7 @@ app.patch('/api/subsctiption', async (req, res) => {
       amount: amount,
     },
   })
-  res.json({dt_begin: dt_begin, dt_end:dt_end, amount:amount})
+  res.json({ dt_begin: dt_begin, dt_end: dt_end, amount: amount })
 })
 
 
